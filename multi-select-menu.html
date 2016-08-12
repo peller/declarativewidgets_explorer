@@ -184,6 +184,9 @@ Collapsing will hide the content but keep the header
 
                 // set CSV value
                 this._setCsv(this.selectedItems.join(','));
+
+                // fire change event
+                this.fire('change');
             }
         });
     })();

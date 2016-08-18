@@ -357,6 +357,15 @@ Example:
         },
 
         _resize: function() {
+            // Measure the parent Jupyter Notebook cell, if any
+            // NOTE: JQuery dependency as well as Jupyter
+            var cellSize = $(this).parents('.cell').first().css(['height', 'width']);
+            if (cellSize) {
+                this.style.width = cellSize.width;
+                this.style.height = cellSize.height;
+            }
+
+            // Resize the child urth-viz-vega widget
             var vega = this.$$('urth-viz-vega');
             if (vega) vega._resize();
         },

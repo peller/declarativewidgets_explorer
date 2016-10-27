@@ -708,11 +708,15 @@ or use optional arguments to specify properties and bindings:
             this.options = this._optionsMap[this.type];
 
             if (this.ref) {
-                // template not ready until dom-if is stamped, so use microtask
-                this.async(function() {
+                // template not ready until dom-if is stamped
+                var listener;
+                this.addEventListener('dom-change', listener = function() {
+                    this.removeEventListener('dom-change', listener);
                     // Move template-generated dataframe from shadow DOM to content DOM
                     // and trigger state restore
-                    Polymer.dom(this).appendChild(this.$$('urth-viz-query')).restoreState();
+                    var query = this.$$('urth-viz-query');
+                    Polymer.dom(this).appendChild(query);
+                    query.restoreState();
 
                     // Call ready() directly to bind to new DOM document
                     var dataframe = this.querySelector('urth-core-dataframe');

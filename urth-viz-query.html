@@ -239,7 +239,7 @@ Let the user choose a query and display the results in an `urth-viz-table`
 
 
         <!-- repeating urth-core-query elements to be stamped as children of myDataframe -->
-        <template id="queries" is="dom-repeat" items="{{queries}}" as="query"
+        <template id="queryTemplate" is="dom-repeat" items="{{queries}}" as="query"
             filter="_isQueryValid" observe="col op val">
             <!-- group -->
             <template is="dom-if" if="{{query.group}}">
@@ -258,9 +258,8 @@ Let the user choose a query and display the results in an `urth-viz-table`
         </template>
 
         <!-- sort -->
-        <template id="sort" is="dom-if" if="{{sortAttrs.by}}">
-            <urth-core-query-sort by="{{sortAttrs.by}}"
-                direction="{{sortAttrs.direction}}"></urth-core-query-sort>
+        <template id="sortTemplate" is="dom-if" if="{{sortAttrs.by}}">
+            <urth-core-query-sort by="{{sortAttrs.by}}" direction="{{sortAttrs.direction}}"></urth-core-query-sort>
         </template>
 
         <!-- user declares dataframe here -->
@@ -499,10 +498,37 @@ Let the user choose a query and display the results in an `urth-viz-table`
         },
 
         ready: function() {
-            // move filters template to user-supplied urth-core-dataframe in light DOM
-            var dataframe = Polymer.dom(this.$.myDataframe).getDistributedNodes()[0];
-            dataframe.appendChild(this.$.queries);
-            dataframe.appendChild(this.$.sort);
+            var dataframe = this.getContentChildNodes('#myDataframe')[0];
+
+            if (document.head.attachShadow) {
+                // move query templates to user-supplied urth-core-dataframe in light DOM
+                dataframe.appendChild(this.$.queryTemplate);
+                dataframe.appendChild(this.$.sortTemplate);
+
+                // tell dataframe to observe its new children whenever the templates change
+                dataframe.ready();
+            } else {
+                // relocated template only seems to work with native shadow DOM support
+                // on every change, manually copy template contents into dataframe for shady DOM support
+
+                var moveModifiedQueries = function(node, tagName) { 
+                    var newQueries = Array.prototype.slice.call(node.parentNode.querySelectorAll(tagName)),
+                        oldQueries = Array.prototype.slice.call(node.querySelectorAll(tagName));
+
+                    oldQueries.forEach(function(query) { Polymer.dom(dataframe).removeChild(query); });
+                    newQueries.forEach(function(query) { Polymer.dom(dataframe).appendChild(query); });
+                    if (newQueries.length) dataframe._handleQueryChildrenChanged();
+                };
+
+                this.$.queryTemplate.addEventListener('dom-change', function() { 
+                    moveModifiedQueries(this, 'urth-core-query-filter');
+                    moveModifiedQueries(this, 'urth-core-query-group');
+                });
+
+                this.$.sortTemplate.addEventListener('dom-change', function() { 
+                    moveModifiedQueries(this, 'urth-core-query-sort');
+                });
+            }
 
             // ignore the first one or two occurrances of an event since they
             // are related to instantiation and will corrupt the queries if a
